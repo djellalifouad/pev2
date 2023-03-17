@@ -32,6 +32,7 @@ import {
 } from "@/symbols"
 import Copy from "@/components/Copy.vue"
 import Diagram from "@/components/Diagram.vue"
+import Grid from "@/components/Grid.vue"
 import PlanNode from "@/components/PlanNode.vue"
 import Stats from "@/components/Stats.vue"
 import { PlanService } from "@/services/plan-service"
@@ -505,6 +506,14 @@ function averageIO(node: Node) {
         <li class="nav-item p-1">
           <a
             class="nav-link px-2 py-0"
+            :class="{ active: activeTab === 'grid' }"
+            href="#grid"
+            >Grid</a
+          >
+        </li>
+        <li class="nav-item p-1">
+          <a
+            class="nav-link px-2 py-0"
             :class="{ active: activeTab === 'raw' }"
             href="#raw"
             >Raw</a
@@ -933,6 +942,19 @@ function averageIO(node: Node) {
             </div>
           </div>
           <!-- end Plan tab -->
+        </div>
+      </div>
+      <div
+        class="tab-pane flex-grow-1 overflow-hidden position-relative"
+        :class="{ 'show active': activeTab === 'grid' }"
+      >
+        <div class="overflow-hidden d-flex w-100 h-100">
+          <div class="overflow-auto flex-grow-1">
+            <grid
+              class="d-flex flex-column flex-grow-1 overflow-hidden plan-grid"
+            >
+            </grid>
+          </div>
         </div>
       </div>
       <div

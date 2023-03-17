@@ -1,0 +1,17 @@
+.plan-grid {
+  line-height: 0.85em;
+  table tr td:nth-child(1) {
+    width: 1%;
+  }
+
+  th, td {
+    font-size: $font-size-base;
+    margin: 0;
+    color: $text-color;
+    white-space: nowrap;
+  }
+
+  .tree-lines {
+    font-family: 'monospace';
+  }
+}
