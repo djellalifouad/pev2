@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { inject, ref, onMounted } from "vue"
-
+import axios from "axios"
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome"
 import { library } from "@fortawesome/fontawesome-svg-core"
 import { fas } from "@fortawesome/free-solid-svg-icons"
@@ -45,7 +45,6 @@ const queryName = ref<string>("")
 const draggingPlan = ref<boolean>(false)
 const draggingQuery = ref<boolean>(false)
 const savedPlans = ref<Plan[]>()
-
 interface Sample extends Array<string> {
   0: string
   1: string
@@ -82,14 +81,11 @@ function submitPlan() {
   newPlan[2] = queryInput.value
   newPlan[3] = new Date().toISOString()
   savePlanData(newPlan)
-
   setPlanData(...newPlan)
 }
-
 async function savePlanData(sample: Plan) {
   await idb.savePlan(sample)
 }
-
 onMounted(() => {
   const textAreas = document.getElementsByTagName("textarea")
   Array.prototype.forEach.call(textAreas, (elem: HTMLInputElement) => {
@@ -99,12 +95,36 @@ onMounted(() => {
   window.history.replaceState("", document.title, noHashURL)
   loadPlans()
 })
-
 async function loadPlans() {
-  const plans = await idb.getPlans()
-  savedPlans.value = plans.slice().reverse()
+  axios.get("http://127.0.0.1:8000/queries").then((response) => {
+    var plans_not_final = response.data
+    var plans_final = []
+    for (var i in plans_not_final) {
+      plans_final.push([
+        plans_not_final[i].query,
+        [
+          JSON.stringify(plans_not_final[i].json_plan_pg_real),
+          JSON.stringify(plans_not_final[i].json_plan_hinter_real),
+          JSON.stringify(plans_not_final[i].json_plan_pg),
+          JSON.stringify(plans_not_final[i].json_plan_hinter),
+        ],
+        "",
+        "",
+        plans_not_final[i].choosed_plan,
+        plans_not_final[i].converge,
+        plans_not_final[i].execution_time_pg,
+        plans_not_final[i].execution_energy_pg,
+        plans_not_final[i].execution_time_hybride,
+        plans_not_final[i].execution_energy_hybrid,
+        plans_not_final[i].id,
+        plans_not_final[i].converge,
+        plans_not_final[i].prefix_algo,
+        plans_not_final[i].prefix,
+      ])
+    }
+    savedPlans.value = plans_final.slice().reverse()
+  })
 }
-
 function loadPlan(plan?: Plan) {
   if (!plan) {
     return
@@ -114,20 +134,16 @@ function loadPlan(plan?: Plan) {
   planInput.value = plan[1]
   queryInput.value = plan[2]
 }
-
-function openPlan(plan: Plan) {
-  setPlanData(plan[0], plan[1], plan[2])
+function openPlan(plan: Plan, index: number) {
+  setPlanData(plan[0], plan[1][index], plan[2])
 }
-
 function editPlan(plan: Plan) {
   loadPlan(plan)
 }
-
 async function deletePlan(plan: Plan) {
   await idb.deletePlan(plan)
   loadPlans()
 }
-
 function handleDrop(event: DragEvent) {
   const input = event.srcElement
   if (!(input instanceof HTMLTextAreaElement)) {
@@ -154,103 +170,12 @@ function handleDrop(event: DragEvent) {
 <template>
   <main-layout>
     <div class="container">
-      <div class="alert alert-warning">
-        This is the demo application for
-        <a href="https://github.com/dalibo/pev2">PEV2</a>. It is serverless and
-        doesn't store your plans.
-        <br />
-        Please consider using
-        <a href="https://explain.dalibo.com">explain.dalibo.com</a> instead if
-        you want to save or share your plans.
+      <div class="row">
+        <div class="col d-flex"></div>
       </div>
       <div class="row">
-        <div class="col d-flex">
-          <div class="text-muted">
-            For best results, use
-            <code>
-              EXPLAIN (ANALYZE, COSTS, VERBOSE, BUFFERS, FORMAT JSON)
-            </code>
-            <br />
-            <em>psql</em> users can export the plan to a file using
-            <code>psql -XqAt -f explain.sql > analyze.json</code>
-          </div>
-          <div class="dropdown ml-auto">
-            <button
-              class="btn btn-secondary dropdown-toggle"
-              type="button"
-              id="dropdownMenuButton"
-              data-toggle="dropdown"
-              aria-haspopup="true"
-              aria-expanded="false"
-            >
-              Sample Plans
-            </button>
-            <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-              <a
-                v-for="(sample, index) in samples"
-                :key="index"
-                class="dropdown-item"
-                v-on:click.prevent="loadPlan(sample)"
-                href
-              >
-                {{ sample[0] }}
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="col-sm-7">
-          <form v-on:submit.prevent="submitPlan">
-            <div class="form-group">
-              <label for="planInput">
-                Plan <span class="small text-muted">(text or JSON)</span>
-              </label>
-              <textarea
-                :class="['form-control', draggingPlan ? 'dropzone-over' : '']"
-                id="planInput"
-                rows="8"
-                v-model="planInput"
-                @dragenter="draggingPlan = true"
-                @dragleave="draggingPlan = false"
-                @drop.prevent="handleDrop"
-                placeholder="Paste execution plan\nOr drop a file"
-              >
-              </textarea>
-            </div>
-            <div class="form-group">
-              <label for="queryInput">
-                Query <span class="small text-muted">(optional)</span>
-              </label>
-              <textarea
-                :class="['form-control', draggingQuery ? 'dropzone-over' : '']"
-                id="queryInput"
-                rows="8"
-                v-model="queryInput"
-                @dragenter="draggingQuery = true"
-                @dragleave="draggingQuery = false"
-                @drop.prevent="handleDrop"
-                placeholder="Paste corresponding SQL query\nOr drop a file"
-              >
-              </textarea>
-            </div>
-            <div class="form-group">
-              <label for="queryName">
-                Plan Name <span class="small text-muted">(optional)</span>
-              </label>
-              <input
-                type="text"
-                class="form-control"
-                id="queryName"
-                v-model="queryName"
-                placeholder="Name for the plan"
-              />
-            </div>
-            <button type="submit" class="btn btn-primary">Submit</button>
-          </form>
-        </div>
-        <div class="col-sm-5 mb-4 mt-4 mt-md-0">
-          <label> Saved Plans </label>
+        <div class="col-sm-7"></div>
+        <div class="col-sm-12">
           <ul class="list-group" v-cloak>
             <li
               class="list-group-item px-2 py-1"
@@ -259,39 +184,107 @@ function handleDrop(event: DragEvent) {
             >
               <div class="row">
                 <div class="col">
-                  <button
-                    class="btn btn-sm btn-outline-secondary py-0 ml-1 float-right"
-                    title="Remove plan from list"
-                    v-on:click.prevent="deletePlan(plan)"
-                  >
-                    <font-awesome-icon icon="trash"></font-awesome-icon>
-                  </button>
-                  <button
-                    class="btn btn-sm btn-outline-secondary py-0 float-right"
-                    title="Edit plan details"
-                    v-on:click.prevent="editPlan(plan)"
-                  >
-                    <font-awesome-icon icon="edit"></font-awesome-icon>
-                  </button>
                   <a
-                    v-on:click.prevent="openPlan(plan)"
+                    v-on:click.prevent="openPlan(plan, 0)"
                     href=""
                     title="Open the plan details"
                   >
-                    {{ plan[0] }}
+                    pg plan
+                  </a>
+                  /
+                  <a
+                    v-on:click.prevent="openPlan(plan, 1)"
+                    href=""
+                    title="Open the plan details"
+                  >
+                    hinter plan
+                  </a>
+                  /
+                  <a
+                    v-on:click.prevent="openPlan(plan, 2)"
+                    href=""
+                    title="Open the plan details"
+                  >
+                    pg plan estimated
+                  </a>
+                  /
+                  <a
+                    v-on:click.prevent="openPlan(plan, 3)"
+                    href=""
+                    title="Open the plan details"
+                  >
+                    hinter plan estimated
                   </a>
                 </div>
               </div>
               <div class="row">
                 <div class="col">
                   <small class="text-muted">
-                    created
                     <span :title="plan[3]?.toString()">
-                      {{ time_ago(plan[3]) }}
+                      choosed plan {{ plan[4] }}
+                    </span>
+                  </small>
+                  <br />
+                  <small class="text-muted">
+                    <span :title="plan[3]?.toString()">
+                      Execution time pg {{ plan[6] }} Secondes
+                    </span>
+                  </small>
+                  <br />
+                  <small class="text-muted">
+                    <span :title="plan[3]?.toString()">
+                      Execution energy pg {{ plan[7] }} Joules
+                    </span>
+                  </small>
+                  <br />
+                  <small class="text-muted">
+                    <span :title="plan[3]?.toString()">
+                      Execution time hybride {{ plan[8] }} Secondes
+                    </span>
+                  </small>
+                  <br />
+                  <small class="text-muted">
+                    <span :title="plan[3]?.toString()">
+                      Execution energy hinter {{ plan[9] }} Joules
+                    </span>
+                  </small>
+                  <br />
+                  <a
+                    v-on:click.prevent=""
+                    href=""
+                    title="Open the plan details"
+                  >
+                    Afficher les selections
+                  </a>
+                  <br />
+                  <a
+                    v-on:click.prevent=""
+                    href=""
+                    title="Open the plan details"
+                  >
+                    Afficher les projections
+                  </a>
+                  <br />
+                  <small class="text-muted">
+                    <span :title="plan[3]?.toString()">
+                      Converge {{ plan[11] }}
+                    </span>
+                  </small>
+                  <br />
+                  <small class="text-muted">
+                    <span :title="plan[3]?.toString()">
+                      Préfix algorithme {{ plan[12] }}
+                    </span>
+                  </small>
+                  <br />
+                  <small class="text-muted">
+                    <span :title="plan[3]?.toString()">
+                      Préfix {{ plan[13] }}
                     </span>
                   </small>
                 </div>
-                <div class="col-6 text-right"></div>
+                <div class="col-6 text-right">Query : {{ plan[0] }}</div>
+                <div class="col-12 text-right">id : {{ plan[10] }}</div>
               </div>
             </li>
           </ul>

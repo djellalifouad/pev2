@@ -37,7 +37,6 @@ function flatten(output: Node[], node: Node) {
 function durationPercent(nodes: Node[]) {
   return _.sumBy(nodes, NodeProp.EXCLUSIVE_DURATION) / executionTime.value
 }
-
 const perTable = computed(() => {
   const tables: { [key: string]: Node[] } = _.groupBy(
     _.filter(nodes, (n) => n[NodeProp.RELATION_NAME] !== undefined),

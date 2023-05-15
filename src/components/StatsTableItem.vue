@@ -22,7 +22,6 @@ function durationPercent(node: Node) {
   )
 }
 </script>
-
 <template>
   <thead class="thead-light">
     <tr
